@@ -4,6 +4,7 @@
 'use strict';
 var connection = new WebSocket('ws://localhost:9090')
 var name = "";
+
 var loginInput = document.querySelector('#loginInput');
 var loginBtn = document.querySelector('#loginBtn');
 
@@ -67,9 +68,9 @@ function onLogin(success) {
       console.log("RTCPeerConnection object was created");
       console.log(myConnection);
 
-      //setup ice handling
-      //when the browser finds an ice candidate we send it to another peer
-      myConnection.onicecandidate = function (event) {
+      // setup ice handling
+      // when the browser finds an ice candidate we send it to another peer
+     myConnection.onicecandidate = function (event) {
 
          if (event.candidate) {
             send({
@@ -107,23 +108,30 @@ function openDataChannel() {
       reliable:false
    };
 
-   dataChannel = myConnection.createDataChannel("myDataChannel", dataChannelOptions);
+  // var thisSide = myConnection.createDataChannel("myDataChannel", dataChannelOptions);
 
-   dataChannel.onerror = function (error) {
-      console.log("Error:", error);
-   };
+   myConnection.ondatachannel = function(e) {
+      dataChannel = e.channel;
+      dataChannel.onerror = function (error) {
+         console.log("Error:", error);
+      };
+      dataChannel.onmessage = function (event) {
+         console.log("Got message:", event.data);
+      };
+      dataChannel.onclose = function (error) {
+         console.log("Close ===== :", error);
+      };
 
-   dataChannel.onmessage = function (event) {
-      console.log("Got message:", event.data);
-   };
-   dataChannel.onclose = function (error) {
-      console.log("Close ===== :", error);
-   };
+      dataChannel.onopen = function(event) {
+         var readyState = dataChannel.readyState;
+         console.log(readyState);
+         if (readyState == "open") {
+           console.log('message sent');
+           dataChannel.send("Hello");
+         }
+       };
+   }
 
-   dataChannel.onopen = function(event) {
-      var readyState = dataChannel.readyState;
-      console.log(readyState);
-    };
 }
 
 //when a user clicks the send message button
@@ -146,7 +154,7 @@ connectToOtherUsernameBtn.addEventListener("click", function () {
          myConnection.setLocalDescription(offer);
          send({
             type: "offer",
-            offer:  myConnection.localDescription
+            offer: offer
          });
 
 
@@ -154,7 +162,6 @@ connectToOtherUsernameBtn.addEventListener("click", function () {
          alert("An error has occurred.");
       }, sdpConstraints);
    }
-   console.log('161' + dataChannel.readyState);
 });
 
 //when somebody wants to call us
@@ -163,12 +170,13 @@ function onOffer(offer, name) {
    myConnection.setRemoteDescription(new RTCSessionDescription(offer));
 
    myConnection.createAnswer(function (answer) {
+      myConnection.setLocalDescription(new RTCSessionDescription(answer));
 
       send({
          type: "answer",
          answer: answer
       });
-      myConnection.setLocalDescription(new RTCSessionDescription(answer));
+
    }, function (error) {
       alert("oops...error");
    });
