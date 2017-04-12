@@ -2,7 +2,7 @@
 // be executed in the renderer process for that window.
 // All of the Node.js APIs are available in this process.
 'use strict';
-var connection = new WebSocket('ws://localhost:9090')
+var connection = new WebSocket('ws://attu3.cs.washington.edu:9090')
 var name = "";
 var loginInput = document.querySelector('#loginInput');
 var loginBtn = document.querySelector('#loginBtn');
