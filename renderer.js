@@ -2,7 +2,7 @@
 // be executed in the renderer process for that window.
 // All of the Node.js APIs are available in this process.
 'use strict';
-var connection = new WebSocket('ws://attu3.cs.washington.edu:9090')
+var connection = new WebSocket('ws://localhost:9090')
 var name = "";
 var loginInput = document.querySelector('#loginInput');
 var loginBtn = document.querySelector('#loginBtn');
@@ -11,11 +11,11 @@ var otherUsernameInput = document.querySelector('#otherUsernameInput');
 var connectToOtherUsernameBtn = document.querySelector('#connectToOtherUsernameBtn');
 var msgInput = document.querySelector('#msgInput');
 var sendMsgBtn = document.querySelector('#sendMsgBtn');
-var connectedUser, myConnection, dataChannel;
+var connectedUser, myConnection, dataChannel, receiveChannel;
 
 //when a user clicks the login button
 loginBtn.addEventListener("click", function(event) {
-   name = loginInput.value;
+   name = loginInput.value
 
    if(name.length > 0) {
       send({
@@ -56,29 +56,35 @@ function onLogin(success) {
    } else {
       // creating our RTCPeerConnection object
       var configuration = {
-         "iceServers": [{ "url": "stun:stun.1.google.com:19302" }]
+        iceServers: [
+          {
+            urls: 'stun:stun.l.google.com:19302'
+          },
+          {
+            urls: 'stun:global.stun.twilio.com:3478?transport=udp'
+          }
+        ]
       };
       // var configuration = null;
 
       myConnection = new RTCPeerConnection(configuration, {
-         optional: [{'RtpDataChannels': true}]
+         'optional': [{'DtlsSrtpKeyAgreement': true}]
       });
 
       console.log("RTCPeerConnection object was created");
       console.log(myConnection);
-
+      openDataChannel();
       //setup ice handling
       //when the browser finds an ice candidate we send it to another peer
       myConnection.onicecandidate = function (event) {
-
-         if (event.candidate) {
-            send({
-               type: "candidate",
-               candidate: event.candidate
-            });
-         }
+        if (event.candidate) {
+          send({
+             type: "candidate",
+             candidate: event.candidate
+          });
+        }
       };
-      openDataChannel();
+      myConnection.ondatachannel = receiveChannelCallback;
    }
 };
 
@@ -124,6 +130,13 @@ function openDataChannel() {
       var readyState = dataChannel.readyState;
       console.log(readyState);
     };
+}
+
+function receiveChannelCallback(event) {
+  receiveChannel = event.channel;
+  receiveChannel.onmessage = function (event) {
+    console.log(event.data);
+  }
 }
 
 //when a user clicks the send message button
@@ -186,7 +199,7 @@ function onCandidate(candidate) {
 
 var sdpConstraints = {'mandatory':
   {
-    'OfferToReceiveAudio': false,
-    'OfferToReceiveVideo': false
+    'OfferToReceiveAudio': true,
+    'OfferToReceiveVideo': true
   }
 };
